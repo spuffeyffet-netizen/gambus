@@ -2,49 +2,108 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Gambus Quest</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   body {
     background: radial-gradient(ellipse at top, #4a2f1a, #1c1108);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 100vh; font-family: 'Georgia', serif; color: #f2e2c4;
+    touch-action: none;
+    padding: 6px;
   }
-  h1 { margin-bottom: 10px; color: #e0b25c; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; }
-  #wrap { position: relative; }
+  h1 { margin-bottom: 6px; color: #e0b25c; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; font-size: clamp(18px, 4vw, 28px); }
+  #wrap {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+  }
   canvas {
     background: #3a5a78;
     border: 6px solid #7a4a25;
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 0 40px rgba(0,0,0,0.3);
     display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
   }
   #hud {
-    display: flex; justify-content: space-between; width: 800px; margin: 10px 0;
-    font-size: 18px; font-weight: bold;
+    display: flex; justify-content: space-between; width: 100%; max-width: 800px; margin: 8px 0;
+    font-size: clamp(14px, 3vw, 18px); font-weight: bold;
   }
-  #instructions { margin-top: 10px; font-size: 14px; color: #d8c8a8; text-align: center; }
+  #instructions { margin-top: 8px; font-size: 13px; color: #d8c8a8; text-align: center; max-width: 800px; }
   #overlay, #quizOverlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(20,10,5,0.92); color: #f2e2c4; display: none;
     flex-direction: column; align-items: center; justify-content: center;
     text-align: center; border-radius: 4px; padding: 20px;
   }
-  #overlay h2 { font-size: 32px; color: #e0b25c; margin-bottom: 12px; }
-  #overlay p, #quizOverlay p { font-size: 16px; margin-bottom: 16px; max-width: 500px; }
+  #overlay h2 { font-size: clamp(22px, 5vw, 32px); color: #e0b25c; margin-bottom: 12px; }
+  #overlay p, #quizOverlay p { font-size: clamp(13px, 3vw, 16px); margin-bottom: 16px; max-width: 500px; }
   #overlay button, .quizBtn {
     padding: 10px 24px; font-size: 16px; cursor: pointer; border: none;
     border-radius: 6px; background: #e0b25c; color: #2b1b0f; font-weight: bold;
     margin: 6px;
   }
   #overlay button:hover, .quizBtn:hover { background: #f2c877; }
-  #quizOverlay h2 { color: #f2c94c; font-size: 24px; margin-bottom: 10px; }
-  #quizQuestion { font-size: 19px; margin-bottom: 18px; max-width: 560px; line-height: 1.4; }
-  #quizOptions { display: flex; flex-direction: column; gap: 10px; width: 340px; }
+  #quizOverlay h2 { color: #f2c94c; font-size: clamp(18px, 4vw, 24px); margin-bottom: 10px; }
+  #quizQuestion { font-size: clamp(15px, 3.5vw, 19px); margin-bottom: 18px; max-width: 560px; line-height: 1.4; }
+  #quizOptions { display: flex; flex-direction: column; gap: 10px; width: min(340px, 85vw); }
   .quizBtn { text-align: left; padding: 12px 16px; }
   .quizBtn.correct { background: #6fae5c !important; color: #fff !important; }
   .quizBtn.wrong { background: #c0392b !important; color: #fff !important; }
   #quizFeedback { margin-top: 14px; font-size: 15px; min-height: 20px; }
+
+  /* Touch controls */
+  #touchControls {
+    display: none;
+    width: 100%;
+    max-width: 800px;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 10px;
+    user-select: none;
+  }
+  #touchControls .dpad {
+    display: flex;
+    gap: 10px;
+  }
+  .touchBtn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #e0b25c, #a5722f);
+    border: 3px solid #5c3a1e;
+    color: #2b1b0f;
+    font-size: 26px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    touch-action: none;
+  }
+  .touchBtn:active, .touchBtn.active {
+    background: linear-gradient(180deg, #f2c877, #c98a3f);
+    transform: translateY(2px);
+  }
+  #jumpBtn {
+    width: 78px;
+    height: 78px;
+    font-size: 15px;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    #touchControls { display: flex; }
+    #instructions { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -73,6 +132,14 @@
 </div>
 <div id="instructions">Arrow keys / A,D to move &nbsp;•&nbsp; Space / W / Up to jump &nbsp;•&nbsp; Collect all 7 strings, dodge the thorns, reach the flag! Miss a hit and answer a quiz to survive.</div>
 
+<div id="touchControls">
+  <div class="dpad">
+    <div class="touchBtn" id="leftBtn">◀</div>
+    <div class="touchBtn" id="rightBtn">▶</div>
+  </div>
+  <div class="touchBtn" id="jumpBtn">JUMP</div>
+</div>
+
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -91,6 +158,27 @@ const quizFeedback = document.getElementById('quizFeedback');
 let keys = {};
 document.addEventListener('keydown', e => { keys[e.key] = true; });
 document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ---- Touch controls ----
+// These set the same flags the keyboard handler uses, so update()
+// doesn't need to know whether input came from a key or a finger.
+function bindTouchButton(el, keyName) {
+  const press = (e) => { e.preventDefault(); keys[keyName] = true; el.classList.add('active'); };
+  const release = (e) => { e.preventDefault(); keys[keyName] = false; el.classList.remove('active'); };
+  el.addEventListener('touchstart', press, { passive: false });
+  el.addEventListener('touchend', release, { passive: false });
+  el.addEventListener('touchcancel', release, { passive: false });
+  // Also support mouse for testing on desktop/touch-emulation
+  el.addEventListener('mousedown', press);
+  el.addEventListener('mouseup', release);
+  el.addEventListener('mouseleave', release);
+}
+bindTouchButton(document.getElementById('leftBtn'), 'ArrowLeft');
+bindTouchButton(document.getElementById('rightBtn'), 'ArrowRight');
+bindTouchButton(document.getElementById('jumpBtn'), ' ');
+
+// Prevent the page itself from scrolling/bouncing while playing on mobile
+document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
 const QUESTIONS = [
   { q: "What family of instruments does the Gambus belong to?", options: ["Lute", "Drum", "Flute", "Xylophone"], answer: 0 },
