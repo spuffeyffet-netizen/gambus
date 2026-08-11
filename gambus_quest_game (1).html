@@ -118,26 +118,6 @@
   @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
     #rotateHint { display: block; }
   }
-
-  /* Landscape on touch devices: reclaim vertical space by overlaying the
-     controls on the canvas itself instead of stacking below it, and
-     hiding the title so the canvas gets almost the full screen height. */
-  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-    body { padding: 4px; justify-content: flex-start; }
-    h1 { display: none; }
-    #hud { max-width: 800px; margin: 2px 0; font-size: 13px; }
-    #touchControls {
-      position: absolute;
-      bottom: 14px;
-      left: 14px;
-      right: 14px;
-      width: auto;
-      max-width: none;
-      pointer-events: none;
-    }
-    #touchControls .dpad, #touchControls #jumpBtn { pointer-events: auto; }
-    .touchBtn { opacity: 0.75; }
-  }
 </style>
 </head>
 <body>
@@ -163,16 +143,16 @@
     <div id="quizOptions"></div>
     <div id="quizFeedback"></div>
   </div>
-
-  <div id="touchControls">
-    <div class="dpad">
-      <div class="touchBtn" id="leftBtn">◀</div>
-      <div class="touchBtn" id="rightBtn">▶</div>
-    </div>
-    <div class="touchBtn" id="jumpBtn">JUMP</div>
-  </div>
 </div>
 <div id="instructions">Arrow keys / A,D to move &nbsp;•&nbsp; Space / W / Up to jump &nbsp;•&nbsp; Collect all 7 strings, dodge the thorns, reach the flag! Miss a hit and answer a quiz to survive.</div>
+
+<div id="touchControls">
+  <div class="dpad">
+    <div class="touchBtn" id="leftBtn">◀</div>
+    <div class="touchBtn" id="rightBtn">▶</div>
+  </div>
+  <div class="touchBtn" id="jumpBtn">JUMP</div>
+</div>
 <div id="rotateHint">↻ Rotate your phone sideways for a bigger view</div>
 
 <script>
@@ -186,19 +166,12 @@ const GRAVITY = 0.6;
 // factor — on a tall/narrow phone screen, width alone leaves the canvas
 // tiny, so we also account for available height (minus header/HUD/controls).
 function resizeCanvas() {
-  const hudEl = document.getElementById('hud');
-  const h1El = document.querySelector('h1');
-  const touchEl = document.getElementById('touchControls');
-  const isOverlay = touchEl && getComputedStyle(touchEl).position === 'absolute';
-
-  const reserved = hudEl.offsetHeight
-    + (h1El.offsetHeight && getComputedStyle(h1El).display !== 'none' ? h1El.offsetHeight : 0)
-    + (!isOverlay && touchEl.offsetParent ? touchEl.offsetHeight : 0)
-    + 30; // margins/padding buffer
-
-  const viewportH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  const availW = window.innerWidth - 12;
-  const availH = viewportH - reserved;
+  const reserved = document.getElementById('hud').offsetHeight
+    + document.querySelector('h1').offsetHeight
+    + (document.getElementById('touchControls').offsetParent ? document.getElementById('touchControls').offsetHeight : 0)
+    + 60; // margins/padding buffer
+  const availW = window.innerWidth - 16;
+  const availH = window.innerHeight - reserved;
 
   let targetW = availW;
   let targetH = targetW / ASPECT;
@@ -213,10 +186,7 @@ function resizeCanvas() {
   canvas.style.height = targetH + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
-window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 250));
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', resizeCanvas);
-}
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlayTitle');
 const overlayText = document.getElementById('overlayText');
