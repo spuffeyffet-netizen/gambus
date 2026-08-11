@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Gambus Quest</title>
 <style>
- * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     height: 100%;
     overflow: hidden;
@@ -18,11 +18,13 @@
     touch-action: none;
     padding: 6px;
   }
-  h1 { margin-bottom: 6px; color: #e0b25c; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; font-size: clamp(18px, 4vw, 28px); }
+  h1 { margin-bottom: 4px; color: #e0b25c; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; font-size: clamp(16px, 4vw, 28px); }
   #wrap {
     position: relative;
     width: 100%;
     max-width: 800px;
+    display: flex;
+    justify-content: center;
   }
   canvas {
     background: #3a5a78;
@@ -31,14 +33,15 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 0 40px rgba(0,0,0,0.3);
     display: block;
     width: 100%;
+    max-width: 800px;
     height: auto;
     touch-action: none;
   }
   #hud {
-    display: flex; justify-content: space-between; width: 100%; max-width: 800px; margin: 8px 0;
-    font-size: clamp(14px, 3vw, 18px); font-weight: bold;
+    display: flex; justify-content: space-between; width: 100%; max-width: 800px; margin: 6px 0;
+    font-size: clamp(13px, 3vw, 18px); font-weight: bold;
   }
-   #instructions { margin-top: 8px; font-size: 13px; color: #d8c8a8; text-align: center; max-width: 800px; }
+  #instructions { margin-top: 6px; font-size: 13px; color: #d8c8a8; text-align: center; max-width: 800px; }
   #overlay, #quizOverlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(20,10,5,0.92); color: #f2e2c4; display: none;
@@ -104,25 +107,127 @@
     #touchControls { display: flex; }
     #instructions { display: none; }
   }
+
+  #rotateHint {
+    display: none;
+    font-size: 12px;
+    color: #f2c94c;
+    margin-top: 4px;
+    text-align: center;
+  }
+  @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+    #rotateHint { display: block; }
+  }
+
+  /* Landscape on touch devices: reclaim vertical space by overlaying the
+     controls on the canvas itself instead of stacking below it, and
+     hiding the title so the canvas gets almost the full screen height. */
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    body { padding: 4px; justify-content: flex-start; }
+    h1 { display: none; }
+    #hud { max-width: 800px; margin: 2px 0; font-size: 13px; }
+    #touchControls {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      right: 14px;
+      width: auto;
+      max-width: none;
+      pointer-events: none;
+    }
+    #touchControls .dpad, #touchControls #jumpBtn { pointer-events: auto; }
+    .touchBtn { opacity: 0.75; }
+  }
 </style>
 </head>
 <body>
-@@ -73,6 +132,14 @@
+
+<h1>🎻 Gambus Quest</h1>
+<div id="hud">
+  <div>Strings: <span id="scoreDisplay">0</span> / 7</div>
+  <div>Lives: <span id="livesDisplay">3</span></div>
+</div>
+<div id="wrap">
+  <canvas id="game" width="800" height="450"></canvas>
+
+  <div id="overlay">
+    <h2 id="overlayTitle"></h2>
+    <p id="overlayText"></p>
+    <button onclick="restartGame()">Play Again</button>
+  </div>
+
+  <div id="quizOverlay">
+    <h2>⚡ Save Your Life!</h2>
+    <p>Answer this Gambus question correctly to avoid losing a life:</p>
+    <div id="quizQuestion"></div>
+    <div id="quizOptions"></div>
+    <div id="quizFeedback"></div>
+  </div>
+
+  <div id="touchControls">
+    <div class="dpad">
+      <div class="touchBtn" id="leftBtn">◀</div>
+      <div class="touchBtn" id="rightBtn">▶</div>
+    </div>
+    <div class="touchBtn" id="jumpBtn">JUMP</div>
+  </div>
 </div>
 <div id="instructions">Arrow keys / A,D to move &nbsp;•&nbsp; Space / W / Up to jump &nbsp;•&nbsp; Collect all 7 strings, dodge the thorns, reach the flag! Miss a hit and answer a quiz to survive.</div>
-
-<div id="touchControls">
-  <div class="dpad">
-    <div class="touchBtn" id="leftBtn">◀</div>
-    <div class="touchBtn" id="rightBtn">▶</div>
-  </div>
-  <div class="touchBtn" id="jumpBtn">JUMP</div>
-</div>
+<div id="rotateHint">↻ Rotate your phone sideways for a bigger view</div>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-@@ -92,379 +159,400 @@
+const W = canvas.width, H = canvas.height;
+const ASPECT = W / H;
+const GRAVITY = 0.6;
+
+// Resize the canvas (via CSS) to use whichever dimension is the limiting
+// factor — on a tall/narrow phone screen, width alone leaves the canvas
+// tiny, so we also account for available height (minus header/HUD/controls).
+function resizeCanvas() {
+  const hudEl = document.getElementById('hud');
+  const h1El = document.querySelector('h1');
+  const touchEl = document.getElementById('touchControls');
+  const isOverlay = touchEl && getComputedStyle(touchEl).position === 'absolute';
+
+  const reserved = hudEl.offsetHeight
+    + (h1El.offsetHeight && getComputedStyle(h1El).display !== 'none' ? h1El.offsetHeight : 0)
+    + (!isOverlay && touchEl.offsetParent ? touchEl.offsetHeight : 0)
+    + 30; // margins/padding buffer
+
+  const viewportH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const availW = window.innerWidth - 12;
+  const availH = viewportH - reserved;
+
+  let targetW = availW;
+  let targetH = targetW / ASPECT;
+  if (targetH > availH) {
+    targetH = availH;
+    targetW = targetH * ASPECT;
+  }
+  targetW = Math.min(targetW, 800);
+  targetH = targetW / ASPECT;
+
+  canvas.style.width = targetW + 'px';
+  canvas.style.height = targetH + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 250));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeCanvas);
+}
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlayTitle');
+const overlayText = document.getElementById('overlayText');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const livesDisplay = document.getElementById('livesDisplay');
+const quizOverlay = document.getElementById('quizOverlay');
+const quizQuestion = document.getElementById('quizQuestion');
+const quizOptions = document.getElementById('quizOptions');
+const quizFeedback = document.getElementById('quizFeedback');
+
+let keys = {};
 document.addEventListener('keydown', e => { keys[e.key] = true; });
 document.addEventListener('keyup', e => { keys[e.key] = false; });
 
@@ -519,6 +624,7 @@ function loop() {
 }
 
 initGame();
+resizeCanvas();
 requestAnimationFrame(loop);
 </script>
 </body>
