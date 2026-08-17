@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Play the Gambus</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --wood-dark: #1c1108;
+    --wood-mid: #3a2313;
+    --wood-warm: #5a341b;
+    --brass: #cf9b3a;
+    --brass-bright: #ffcf6e;
+    --ivory: #efe4cd;
+    --ivory-dim: #b6a486;
+    --hole-dark: #0c0704;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at 50% -10%, #3a2413 0%, transparent 60%),
+      linear-gradient(180deg, var(--wood-dark) 0%, #120a05 100%);
+    color:var(--ivory);
+    font-family:'Inter', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    overflow-x:hidden;
+  }
+
+  .eyebrow{
+    margin-top:34px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    font-size:11px;
+    color:var(--brass);
+    opacity:.85;
+  }
+
+  h1{
+    font-family:'Amiri', serif;
+    font-weight:700;
+    font-size:clamp(28px, 6vw, 46px);
+    margin:6px 0 2px;
+    color:var(--ivory);
+    text-align:center;
+    letter-spacing:.01em;
+  }
+
+  .sub{
+    font-size:14px;
+    color:var(--ivory-dim);
+    margin-bottom:18px;
+    text-align:center;
+    max-width:420px;
+    padding:0 20px;
+    line-height:1.5;
+  }
+
+  .stage{
+    position:relative;
+    width:min(92vw, 480px);
+    margin-bottom:8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  svg{ width:100%; height:auto; display:block; overflow:visible; }
+
+  .string-hit{
+    cursor:pointer;
+    touch-action: manipulation;
+  }
+
+  .string-line{
+    stroke:var(--brass);
+    stroke-width:2;
+    transition: stroke 120ms ease, filter 120ms ease;
+    filter: drop-shadow(0 0 0 rgba(255,207,110,0));
+  }
+
+  .string-hit:hover .string-line{
+    stroke:var(--brass-bright);
+  }
+
+  .string-line.plucked{
+    stroke:var(--brass-bright);
+    filter: drop-shadow(0 0 6px rgba(255,207,110,.85));
+    animation: vibrate 420ms ease-out;
+  }
+
+  @keyframes vibrate{
+    0%{ transform: scaleY(1) translateY(0); }
+    15%{ transform: translateY(-3px); }
+    30%{ transform: translateY(2.4px); }
+    45%{ transform: translateY(-1.6px); }
+    60%{ transform: translateY(1px); }
+    75%{ transform: translateY(-.4px); }
+    100%{ transform: translateY(0); }
+  }
+
+  .note-label{
+    font-family:'Inter', sans-serif;
+    font-size:9px;
+    fill:var(--ivory-dim);
+    letter-spacing:.05em;
+    pointer-events:none;
+    opacity:.75;
+  }
+
+  .rosette-ring{ fill:none; stroke:var(--brass); stroke-width:1; opacity:.55; }
+  .rosette-star{ fill:var(--brass); opacity:.35; }
+
+  .hint{
+    margin-top:16px;
+    margin-bottom:30px;
+    font-size:12px;
+    color:var(--ivory-dim);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    opacity:.8;
+  }
+
+  .hint .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--brass);
+    display:inline-block;
+    animation: pulse 1.8s infinite ease-in-out;
+  }
+
+  @keyframes pulse{
+    0%,100%{ opacity:.4; transform:scale(1); }
+    50%{ opacity:1; transform:scale(1.3); }
+  }
+
+  .unlock{
+    margin-top:8px;
+    padding:10px 22px;
+    background:transparent;
+    border:1px solid var(--brass);
+    color:var(--brass-bright);
+    border-radius:999px;
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+    letter-spacing:.03em;
+    cursor:pointer;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .unlock:hover{ background:var(--brass); color:var(--wood-dark); }
+  .unlock.hidden{ display:none; }
+
+  @media (prefers-reduced-motion: reduce){
+    .string-line.plucked{ animation:none; }
+    .hint .dot{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">Gambi presents</div>
+  <h1>Play the Gambus</h1>
+  <p class="sub">Tap or click any string to hear it ring. Eleven strings, tuned across two octaves — try plucking a few in a row.</p>
+
+  <button class="unlock" id="unlockBtn">Tap to enable sound</button>
+
+  <div class="stage">
+    <svg id="gambusSvg" viewBox="0 -40 400 600" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- neck -->
+      <rect x="178" y="0" width="44" height="150" rx="6" fill="#4a2c17" stroke="#2a170c" stroke-width="2"/>
+      <!-- pegbox -->
+      <path d="M170 0 L230 0 L222 -34 L178 -34 Z" fill="#3a2313" stroke="#2a170c" stroke-width="2"/>
+      <circle cx="182" cy="-18" r="4" fill="#cf9b3a"/>
+      <circle cx="196" cy="-24" r="4" fill="#cf9b3a"/>
+      <circle cx="210" cy="-24" r="4" fill="#cf9b3a"/>
+      <circle cx="224" cy="-18" r="4" fill="#cf9b3a"/>
+
+      <!-- frets suggestion -->
+      <line x1="178" y1="40" x2="222" y2="40" stroke="#cf9b3a" stroke-width="1.5" opacity=".5"/>
+      <line x1="178" y1="80" x2="222" y2="80" stroke="#cf9b3a" stroke-width="1.5" opacity=".5"/>
+      <line x1="178" y1="120" x2="222" y2="120" stroke="#cf9b3a" stroke-width="1.5" opacity=".5"/>
+
+      <!-- pear-shaped body -->
+      <path d="
+        M200 140
+        C 300 150, 372 240, 358 340
+        C 346 440, 268 512, 200 520
+        C 132 512, 54 440, 42 340
+        C 28 240, 100 150, 200 140
+        Z"
+        fill="#5a341b" stroke="#2a170c" stroke-width="3"/>
+
+      <!-- subtle wood grain -->
+      <path d="M90 220 C 150 260, 250 260, 310 220" stroke="#3a2313" stroke-width="1" opacity=".35" fill="none"/>
+      <path d="M75 300 C 150 340, 250 340, 325 300" stroke="#3a2313" stroke-width="1" opacity=".3" fill="none"/>
+      <path d="M80 400 C 150 430, 250 430, 320 400" stroke="#3a2313" stroke-width="1" opacity=".3" fill="none"/>
+
+      <!-- rosette / sound hole -->
+      <circle cx="200" cy="330" r="46" fill="#0c0704"/>
+      <circle class="rosette-ring" cx="200" cy="330" r="46"/>
+      <circle class="rosette-ring" cx="200" cy="330" r="38"/>
+      <g class="rosette-star" transform="translate(200,330)">
+        <polygon points="0,-30 7,-9 28,-9 11,4 17,25 0,12 -17,25 -11,4 -28,-9 -7,-9"/>
+      </g>
+
+      <!-- bridge -->
+      <rect x="160" y="452" width="80" height="10" rx="3" fill="#2a170c"/>
+
+      <!-- 11 strings, tail at bridge, head at top of neck -->
+      <!-- string x positions spread across neck/body -->
+      <g id="strings"></g>
+
+    </svg>
+  </div>
+
+  <div class="hint"><span class="dot"></span> tap a string to pluck it</div>
+
+<script>
+(function(){
+  const svgNS = "http://www.w3.org/2000/svg";
+  const stringsGroup = document.getElementById('strings');
+
+  // 11 strings: note name + frequency (Hz), spanning ~2 octaves, D minor / hijaz-leaning flavor
+  const strings = [
+    { note:'D3', freq:146.83 },
+    { note:'F3', freq:174.61 },
+    { note:'G3', freq:196.00 },
+    { note:'A3', freq:220.00 },
+    { note:'C4', freq:261.63 },
+    { note:'D4', freq:293.66 },
+    { note:'F4', freq:349.23 },
+    { note:'G4', freq:392.00 },
+    { note:'A4', freq:440.00 },
+    { note:'C5', freq:523.25 },
+    { note:'D5', freq:587.33 }
+  ];
+
+  const bridgeY = 452;
+  const headY = 4;
+  const startX = 182;
+  const endX = 218;
+  const n = strings.length;
+
+  strings.forEach((s, i) => {
+    const x = startX + (i * (endX - startX) / (n - 1));
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'string-hit');
+    g.setAttribute('data-index', i);
+
+    // wide invisible hit area for easy tapping
+    const hit = document.createElementNS(svgNS, 'line');
+    hit.setAttribute('x1', x); hit.setAttribute('y1', headY);
+    hit.setAttribute('x2', x); hit.setAttribute('y2', bridgeY);
+    hit.setAttribute('stroke', 'transparent');
+    hit.setAttribute('stroke-width', '16');
+
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', x); line.setAttribute('y1', headY);
+    line.setAttribute('x2', x); line.setAttribute('y2', bridgeY);
+    line.setAttribute('class', 'string-line');
+    line.setAttribute('id', 'string-' + i);
+
+    g.appendChild(hit);
+    g.appendChild(line);
+    stringsGroup.appendChild(g);
+
+    // note label near bridge
+    if (i === 0 || i === n - 1 || i === Math.floor(n/2)) {
+      const label = document.createElementNS(svgNS, 'text');
+      label.setAttribute('x', x);
+      label.setAttribute('y', bridgeY + 22);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('class', 'note-label');
+      label.textContent = s.note;
+      stringsGroup.appendChild(label);
+    }
+
+    g.addEventListener('click', () => pluck(i));
+  });
+
+  // --- Audio ---
+  let audioCtx = null;
+  function ensureCtx(){
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function pluckTone(freq){
+    const ctx = ensureCtx();
+    const now = ctx.currentTime;
+
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.5, now + 0.008);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+    master.connect(ctx.destination);
+
+    // fundamental + a couple harmonics for a warm plucked-string timbre
+    const partials = [
+      { mult: 1,   gain: 1.0,  type:'triangle' },
+      { mult: 2,   gain: 0.35, type:'sine' },
+      { mult: 3,   gain: 0.15, type:'sine' },
+      { mult: 4.01,gain: 0.06, type:'sine' }
+    ];
+
+    partials.forEach(p => {
+      const osc = ctx.createOscillator();
+      osc.type = p.type;
+      osc.frequency.setValueAtTime(freq * p.mult, now);
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(p.gain, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 1.4 / Math.sqrt(p.mult));
+
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now);
+      osc.stop(now + 1.7);
+    });
+
+    // tiny percussive click at onset for pluck attack
+    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuf;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.12, now);
+    noise.connect(noiseGain);
+    noiseGain.connect(master);
+    noise.start(now);
+  }
+
+  function pluck(i){
+    ensureCtx();
+    pluckTone(strings[i].freq);
+    const el = document.getElementById('string-' + i);
+    el.classList.remove('plucked');
+    void el.offsetWidth; // restart animation
+    el.classList.add('plucked');
+    setTimeout(() => el.classList.remove('plucked'), 450);
+  }
+
+  const unlockBtn = document.getElementById('unlockBtn');
+  unlockBtn.addEventListener('click', () => {
+    ensureCtx();
+    unlockBtn.classList.add('hidden');
+  });
+
+  // some browsers allow audio context creation without an explicit unlock
+  // once the user interacts with a string directly, so hide button after first pluck too
+  stringsGroup.addEventListener('click', () => unlockBtn.classList.add('hidden'));
+})();
+</script>
+
+</body>
+</html>
